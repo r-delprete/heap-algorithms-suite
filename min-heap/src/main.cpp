@@ -11,12 +11,14 @@ int main(int argc, char** argv) {
   MinHeap heap2(input2);
 
   heap.print("Heap with easiest input");
+  heap.print("Heap with easiest input", output);
   heap2.print("\nHeap with hardest input");
+  heap2.print("\nHeap with hardest input", output);
 
-  unique_ptr<int> min = heap.extract_min();
+  int min = heap.extract_min();
 
   cout << endl << "Minimum value (easiest input) => ";
-  min ? cout << *min : cout << "NULL";
+  min != -1 ? cout << min : cout << "NULL";
   cout << endl;
 
   heap2.decrease_key(20, 1);

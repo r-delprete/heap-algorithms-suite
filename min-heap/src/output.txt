@@ -1,0 +1,5 @@
+Heap with easiest input
+10	17	15	20	25	
+
+Heap with hardest input
+10	17	15	20	25	

@@ -7,29 +7,18 @@ int main(int argc, char** argv) {
   ifstream input2("input2.txt");
   ofstream output("output.txt");
 
-  MaxHeap mh2(input2);
   MaxHeap mh(input2);
-  mh2.print("\nHeap with brackets and comma");
-  int max = mh2.extract_max();
+
+  mh.print();
+  mh.print("Max heap", output);
+
+  int old_value = 10;
+  int new_value = 45;
+  cout << endl;
+  mh.increase_key(old_value, new_value);
+  mh.print();
+  int max = mh.extract_max();
   cout << "\nMax heap value => ";
-  (max != -1 ? cout << max : cout << "NULL");
-  cout << endl;
-
-  mh2.heap_sort();
-  mh2.print("\nAfter heap sort");
-
-  mh.load(input);
-  mh.print("\nHeap without brackets and comma");
-
-  int old_value = 25;
-  int new_value = 1;
-  cout << endl;
-  mh.decrease_key(old_value, new_value);
-  mh.print();
-  mh.increase_key(1, 35);
-  mh.print();
-  max = mh.extract_max();
-  cout << "Max heap value => ";
   (max != -1 ? cout << max : cout << "NULL");
   cout << endl;
   mh.heap_sort();
