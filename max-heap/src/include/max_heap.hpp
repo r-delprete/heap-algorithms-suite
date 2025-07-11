@@ -3,29 +3,16 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
 
+using shared_heap_item = std::shared_ptr<int>;
+
 class MaxHeap {
-  std::vector<int> data;
+  std::vector<shared_heap_item> data;
   int size;
-
-  void build_heap() {
-    for (int i = size / 2; i >= 0; i--) heapify(i, size);
-  }
-
-  void heapify(int index, int size) {
-    int max = index, left = 2 * index + 1, right = 2 * index + 2;
-
-    if (left < size && data[max] < data[left]) max = left;
-    if (right < size && data[max] < data[right]) max = right;
-
-    if (max != index) {
-      std::swap(data[max], data[index]);
-      heapify(max, size);
-    }
-  }
 
   void format_line(std::string& line) {
     if (line.front() == '<') line = line.substr(1);
@@ -40,9 +27,24 @@ class MaxHeap {
     stream.str("");
   }
 
+  void build_heap() {
+    for (int i = size / 2; i >= 0; i--) heapify(i, size);
+  }
+
+  void heapify(int index, int size) {
+    int largest = index, left = 2 * index + 1, right = 2 * index + 2;
+
+    if (left < size && *(data[left]) > *(data[largest])) largest = left;
+    if (right < size && *(data[right]) > *(data[largest])) largest = right;
+    if (largest != index) {
+      std::swap(data[largest], data[index]);
+      heapify(largest, size);
+    }
+  }
+
   void shift_up(int index) {
-    while (index > 0 && data[(index - 1) / 2] < data[index]) {
-      std::swap(data[index], data[(index - 1) / 2]);
+    while (index > 0 && *(data[(index - 1) / 2]) < *(data[index])) {
+      std::swap(data[(index - 1) / 2], data[index]);
       index = (index - 1) / 2;
     }
   }
@@ -50,10 +52,13 @@ class MaxHeap {
 public:
   MaxHeap(std::ifstream& input) { load(input); }
 
-  ~MaxHeap() { data.clear(); }
+  void reset() {
+    data.clear();
+    size = 0;
+  }
 
   void load(std::ifstream& input) {
-    data.clear();
+    reset();
     input.clear();
     input.seekg(0, std::ios::beg);
 
@@ -62,20 +67,21 @@ public:
     format_line(line);
     std::istringstream iss(line);
     int value;
-    while (iss >> value) data.push_back(value);
-    clear_stream(iss);
+    while (iss >> value) data.push_back(std::make_shared<int>(value));
     size = data.size();
+    line.clear();
+    clear_stream(iss);
 
     build_heap();
   }
 
-  int extract_max() {
+  shared_heap_item extract_max() {
     if (data.empty()) {
-      std::cerr << "[extract_max ERROR] Heap is empty" << std::endl;
-      return -1;
+      std::cerr << "Heap is empty" << std::endl;
+      return nullptr;
     }
 
-    int max = data[0];
+    auto max = data[0];
     std::swap(data[0], data[size - 1]);
     size--;
     data.pop_back();
@@ -84,20 +90,30 @@ public:
     return max;
   }
 
+  void heap_sort() {
+    build_heap();
+    int original_size = size;
+
+    for (int i = size - 1; i >= 0; i--) {
+      std::swap(data[0], data[i]);
+      size--;
+      heapify(0, i);
+    }
+
+    size = original_size;
+  }
+
+  void print(std::ostream& out = std::cout, std::string message = "Heap") {
+    out << message << std::endl;
+    for (int i = 0; i < size; i++) out << *data[i] << "\t";
+    out << std::endl;
+  }
+
   int index_of(int key) {
-    if (data.empty()) {
-      std::cerr << "[index_of ERROR] Heap is empty" << std::endl;
-      return -1;
-    }
-
     for (int i = 0; i < data.size(); i++) {
-      if (data[i] == key) {
-        std::cout << "[index_of INFO] Key " << key << " found at position " << i << std::endl;
-        return i;
-      }
+      if (key == *(data[i])) return i;
     }
 
-    std::cerr << "[index_of ERROR] Key " << key << " not found" << std::endl;
     return -1;
   }
 
@@ -109,26 +125,11 @@ public:
 
     int index = index_of(old_key);
     if (index != -1) {
-      data[index] = new_key;
+      *data[index] = new_key;
       shift_up(index);
 
-      std::cout << "[increase_key INFO] Increased old key " << old_key << " to new key " << new_key << std::endl;
+      std::cout << "[increase_key INFO] Increased key " << old_key << " to " << new_key << std::endl;
     }
-  }
-
-  void heap_sort() {
-    build_heap();
-    for (int i = size - 1; i >= 0; i--) {
-      std::swap(data[0], data[i]);
-      size--;
-      heapify(0, i);
-    }
-  }
-
-  void print(std::string message = "Max heap", std::ostream& out = std::cout) {
-    out << message << std::endl;
-    for (auto& value : data) out << value << "\t";
-    out << std::endl;
   }
 };
 

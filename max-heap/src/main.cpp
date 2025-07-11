@@ -10,19 +10,19 @@ int main(int argc, char** argv) {
   MaxHeap mh(input2);
 
   mh.print();
-  mh.print("Max heap", output);
+  mh.print(output, "Max heap");
 
   int old_value = 10;
   int new_value = 45;
   cout << endl;
   mh.increase_key(old_value, new_value);
   mh.print();
-  int max = mh.extract_max();
+  auto max = mh.extract_max();
   cout << "\nMax heap value => ";
-  (max != -1 ? cout << max : cout << "NULL");
+  (max ? cout << *max : cout << "NULL");
   cout << endl;
   mh.heap_sort();
-  mh.print("\nAfter heap sort");
+  mh.print(cout, "\nAfter heap sort");
 
   input.close();
   input2.close();
