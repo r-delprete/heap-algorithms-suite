@@ -15,14 +15,19 @@ int main(int argc, char** argv) {
   heap2.print("\nHeap with hardest input");
   heap2.print("\nHeap with hardest input", output);
 
-  int min = heap.extract_min();
+  auto min = heap2.extract_min();
 
   cout << endl << "Minimum value (easiest input) => ";
-  min != -1 ? cout << min : cout << "NULL";
+  min ? cout << *min : cout << "NULL";
   cout << endl;
 
   heap2.decrease_key(20, 1);
   heap2.print("\nAfter decrease key");
+
+  auto sorted = heap.heapsort();
+  cout << "Sorted heap" << endl;
+  for (auto& item : sorted) cout << *item << "\t";
+  cout << endl;
 
   input.close();
   input2.close();

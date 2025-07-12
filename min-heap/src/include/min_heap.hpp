@@ -3,45 +3,49 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
 
-class MinHeap {
-  std::vector<int> data;
-  int size;
+using shared_heap_item = std::shared_ptr<int>;
+shared_heap_item factory_shared_item(int value) { return std::make_shared<int>(value); }
 
-  void clear_stream(std::istringstream& stream) {
-    stream.clear();
-    stream.str("");
-  }
+enum LogType { ERROR, INFO, WARNING };
+void log(std::string function_name, std::string message, LogType type = LogType::INFO) {
+  std::string log_type = type == LogType::ERROR ? "ERROR" : type == LogType::INFO ? "INFO" : "WARNING";
+  std::ostream& out = type == LogType::ERROR ? std::cerr : std::cout;
+  out << "[" << function_name << " " << log_type << "] " << message << std::endl;
+}
+
+class MinHeap {
+  std::vector<shared_heap_item> data;
 
   void format_line(std::string& line) {
+    if (line.empty()) return;
     if (line.front() == '<') line = line.substr(1);
     if (line.back() == '>') line.pop_back();
     for (auto& c : line) {
-      if (c == ',') c = ' ';
+      if (c == ',') c = 32;
     }
   }
 
-  void build_heap() {
-    for (int i = size / 2; i >= 0; i--) heapify(i, size);
+  void build_heap(std::vector<shared_heap_item>& data) {
+    for (int i = data.size() / 2 - 1; i >= 0; i--) heapify(data, i, data.size());
   }
 
-  void heapify(int index, int size) {
+  void heapify(std::vector<shared_heap_item>& heap, int index, int size) {
     int min = index, left = 2 * index + 1, right = 2 * index + 2;
-
-    if (left < size && data[min] > data[left]) min = left;
-    if (right < size && data[min] > data[right]) min = right;
-
+    if (left < size && *heap[min] > *heap[left]) min = left;
+    if (right < size && *heap[min] > *heap[right]) min = right;
     if (min != index) {
-      std::swap(data[min], data[index]);
-      heapify(min, size);
+      std::swap(heap[index], heap[min]);
+      heapify(heap, min, size);
     }
   }
 
   void shift_up(int index) {
-    while (index > 0 && data[(index - 1) / 2] > data[index]) {
+    while (index > 0 && *data[(index - 1) / 2] > *data[index]) {
       std::swap(data[(index - 1) / 2], data[index]);
       index = (index - 1) / 2;
     }
@@ -50,86 +54,95 @@ class MinHeap {
 public:
   MinHeap(std::ifstream& input) { load(input); }
 
-  ~MinHeap() { data.clear(); }
+  void reset() { data.clear(); }
+
+  bool empty() { return data.empty(); }
 
   void load(std::ifstream& input) {
-    data.clear();
+    reset();
     input.clear();
     input.seekg(0, std::ios::beg);
 
     std::string line;
     std::getline(input, line);
     format_line(line);
-
     std::istringstream iss(line);
     int value;
-    while (iss >> value) data.push_back(value);
-    size = data.size();
-    clear_stream(iss);
-
-    build_heap();
+    while (iss >> value) insert(factory_shared_item(value));
+    iss.clear();
+    iss.str("");
+    line.clear();
   }
 
-  int extract_min() {
-    if (data.empty()) {
-      std::cerr << "[extract_min ERROR] Heap is empty" << std::endl;
-      return -1;
+  void insert(shared_heap_item item) {
+    data.push_back(item);
+    shift_up(data.size() - 1);
+  }
+
+  int index_of(int value) const {
+    for (int i = 0; i < data.size(); i++) {
+      if (*data[i] == value) return i;
     }
 
-    int min = data[0];
-    std::swap(data[0], data[size - 1]);
-    size--;
+    return -1;
+  }
+
+  shared_heap_item extract_min() {
+    if (empty()) {
+      log("extract_min", "Heap is empty", LogType::ERROR);
+      return nullptr;
+    }
+
+    auto min = data[0];
+    std::swap(data[0], data[data.size() - 1]);
     data.pop_back();
-    heapify(0, size);
+    heapify(data, 0, data.size());
 
     return min;
   }
 
-  void heap_sort() {
-    build_heap();
+  std::vector<shared_heap_item> heapsort() {
+    int size = data.size();
+    auto tmp = data;
+    build_heap(tmp);
 
     for (int i = size - 1; i >= 0; i--) {
-      std::swap(data[0], data[i]);
-      size--;
-      heapify(0, i);
-    }
-  }
-
-  int index_of(int key) {
-    if (data.empty()) {
-      std::cerr << "[index_of ERROR] Heap is empty" << std::endl;
-      return -1;
+      std::swap(tmp[0], tmp[i]);
+      heapify(tmp, 0, i);
     }
 
-    for (int i = 0; i < data.size(); i++) {
-      if (data[i] == key) {
-        std::cout << "[index_of INFO] Key " << key << " found at position " << i << std::endl;
-        return i;
-      }
-    }
-
-    std::cerr << "[index_of ERROR] Key " << key << " not found" << std::endl;
-    return -1;
+    return tmp;
   }
 
   void decrease_key(int old_key, int new_key) {
+    std::ostringstream ss;
     if (new_key > old_key) {
-      std::cerr << "[increase_key ERROR] New key " << new_key << " is greater than old key " << old_key << std::endl;
+      ss << "New key " << new_key << " is greater than old key " << old_key;
+      log("decrease_key", ss.str(), LogType::ERROR);
+      ss.clear();
+      ss.str("");
       return;
     }
 
     int index = index_of(old_key);
-    if (!index != -1) {
-      data[index] = new_key;
+    if (index != -1) {
+      *data[index] = new_key;
       shift_up(index);
-
-      std::cout << "[increase_key INFO] Increased old key " << old_key << " to new key " << new_key << std::endl;
+      ss << "Decreased key " << old_key << " to new key " << new_key;
+      log("decrease_key", ss.str());
+      ss.clear();
+      ss.str("");
+    } else {
+      ss << "Key index " << old_key << " not found";
+      log("decrease_key", ss.str(), LogType::ERROR);
+      ss.clear();
+      ss.str("");
     }
   }
 
-  void print(std::string message = "Min heap", std::ostream& out = std::cout) {
+  void print(std::string message = "Heap", std::ostream& out = std::cout) const {
     out << message << std::endl;
-    for (auto& value : data) out << value << "\t";
+    for (auto& item : data) out << *item << "\t";
     out << std::endl;
   }
 };
