@@ -12,17 +12,22 @@ int main(int argc, char** argv) {
   mh.print();
   mh.print(output, "Max heap");
 
-  int old_value = 10;
-  int new_value = 45;
+  int old_key = 10;
+  int new_key = 45;
   cout << endl;
-  mh.increase_key(old_value, new_value);
+  cout << "Increased key " << old_key << " to " << new_key << endl;
+  mh.increase_key(old_key, new_key);
   mh.print();
+
   auto max = mh.extract_max();
   cout << "\nMax heap value => ";
   (max ? cout << *max : cout << "NULL");
   cout << endl;
-  mh.heap_sort();
-  mh.print(cout, "\nAfter heap sort");
+
+  auto sorted = mh.heapsort();
+  cout << "\nAfter heap sort" << endl;
+  for (auto& item : sorted) cout << *item << "\t";
+  cout << endl;
 
   input.close();
   input2.close();

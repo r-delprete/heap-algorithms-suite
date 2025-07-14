@@ -8,42 +8,43 @@
 #include <string>
 #include <vector>
 
-using shared_heap_item = std::shared_ptr<int>;
+using shared_item = std::shared_ptr<int>;
+shared_item create_item(const int value) { return std::make_shared<int>(value); }
 
 class MaxHeap {
-  std::vector<shared_heap_item> data;
-  int size;
+  std::vector<shared_item> data;
 
-  void format_line(std::string& line) {
+  void format_line(std::string& line) const {
+    if (line.empty()) return;
     if (line.front() == '<') line = line.substr(1);
     if (line.back() == '>') line.pop_back();
-    for (auto& c : line) {
-      if (c == ',') c = ' ';
+    for (auto& ch : line) {
+      if (ch == ',') ch = ' ';
     }
   }
 
-  void clear_stream(std::istringstream& stream) {
+  void clear_stream(std::istringstream& stream) const {
     stream.clear();
     stream.str("");
   }
 
-  void build_heap() {
-    for (int i = size / 2; i >= 0; i--) heapify(i, size);
+  void build_heap(std::vector<shared_item>& heap) {
+    for (int i = (heap.size() - 1) / 2; i >= 0; i--) heapify(heap, i, heap.size());
   }
 
-  void heapify(int index, int size) {
-    int largest = index, left = 2 * index + 1, right = 2 * index + 2;
+  void heapify(std::vector<shared_item>& heap, const int index, const int size) {
+    int max = index, left = 2 * index + 1, right = 2 * index + 2;
 
-    if (left < size && *(data[left]) > *(data[largest])) largest = left;
-    if (right < size && *(data[right]) > *(data[largest])) largest = right;
-    if (largest != index) {
-      std::swap(data[largest], data[index]);
-      heapify(largest, size);
+    if (left < size && *heap[left] > *heap[max]) max = left;
+    if (right < size && *heap[right] > *heap[max]) max = right;
+    if (max != index) {
+      std::swap(heap[max], heap[index]);
+      heapify(heap, max, size);
     }
   }
 
   void shift_up(int index) {
-    while (index > 0 && *(data[(index - 1) / 2]) < *(data[index])) {
+    while (index > 0 && *data[(index - 1) / 2] < *data[index]) {
       std::swap(data[(index - 1) / 2], data[index]);
       index = (index - 1) / 2;
     }
@@ -52,10 +53,10 @@ class MaxHeap {
 public:
   MaxHeap(std::ifstream& input) { load(input); }
 
-  void reset() {
-    data.clear();
-    size = 0;
-  }
+  void reset() { data.clear(); }
+  void resize(const int size) { data.resize(size); }
+  bool empty() const { return data.empty(); }
+  std::size_t size() const { return data.size(); }
 
   void load(std::ifstream& input) {
     reset();
@@ -67,51 +68,48 @@ public:
     format_line(line);
     std::istringstream iss(line);
     int value;
-    while (iss >> value) data.push_back(std::make_shared<int>(value));
-    size = data.size();
-    line.clear();
-    clear_stream(iss);
-
-    build_heap();
+    while (iss >> value) insert(create_item(value));
   }
 
-  shared_heap_item extract_max() {
+  void insert(const shared_item& item) {
+    data.push_back(item);
+    shift_up(size() - 1);
+  }
+
+  std::vector<shared_item> heapsort() {
+    auto tmp = data;
+
+    build_heap(tmp);
+    for (int i = tmp.size() - 1; i >= 0; i--) {
+      std::swap(tmp[0], tmp[i]);
+      heapify(tmp, 0, i);
+    }
+
+    return tmp;
+  }
+
+  shared_item extract_max() {
     if (data.empty()) {
-      std::cerr << "Heap is empty" << std::endl;
+      std::cerr << "[extract_max ERROR] Heap is empty" << std::endl;
       return nullptr;
     }
 
     auto max = data[0];
-    std::swap(data[0], data[size - 1]);
-    size--;
+    std::swap(data[0], data[size() - 1]);
     data.pop_back();
-    heapify(0, size);
+    heapify(data, 0, size());
 
     return max;
   }
 
-  void heap_sort() {
-    build_heap();
-    int original_size = size;
-
-    for (int i = size - 1; i >= 0; i--) {
-      std::swap(data[0], data[i]);
-      size--;
-      heapify(0, i);
+  int index_of(const int key) {
+    if (data.empty()) {
+      std::cerr << "[index_of ERROR] Heap is empty" << std::endl;
+      return -1;
     }
 
-    size = original_size;
-  }
-
-  void print(std::ostream& out = std::cout, std::string message = "Heap") {
-    out << message << std::endl;
-    for (int i = 0; i < size; i++) out << *data[i] << "\t";
-    out << std::endl;
-  }
-
-  int index_of(int key) {
-    for (int i = 0; i < data.size(); i++) {
-      if (key == *(data[i])) return i;
+    for (int i = 0; i < size(); i++) {
+      if (*data[i] == key) return i;
     }
 
     return -1;
@@ -127,9 +125,13 @@ public:
     if (index != -1) {
       *data[index] = new_key;
       shift_up(index);
-
-      std::cout << "[increase_key INFO] Increased key " << old_key << " to " << new_key << std::endl;
     }
+  }
+
+  void print(std::ostream& out = std::cout, const std::string message = "Heap") {
+    out << message << std::endl;
+    for (auto& item : data) out << *item << "\t";
+    out << std::endl;
   }
 };
 
